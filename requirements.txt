@@ -1,0 +1,10 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.5.3
+langgraph>=0.2.0
+langchain-core
+qdrant-client==1.7.0
+python-multipart==0.0.6
+python-dotenv==1.0.0
+sentence-transformers
+torch
