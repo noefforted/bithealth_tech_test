@@ -3,7 +3,6 @@ import torch
 
 class EmbeddingService:
     def __init__(self):
-        # Kita gunakan model multilingual agar jago Bahasa Indonesia
         # Model ini menghasilkan 384 dimensi
         self.model_name = 'paraphrase-multilingual-MiniLM-L12-v2'
         self.model = SentenceTransformer(self.model_name)
