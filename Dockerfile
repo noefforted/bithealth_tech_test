@@ -1,4 +1,3 @@
-# Gunakan image Python yang ringan
 FROM python:3.10-slim
 
 # Set working directory di dalam kontainer

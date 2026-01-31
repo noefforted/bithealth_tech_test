@@ -1,6 +1,7 @@
 import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
+from qdrant_client.http.exceptions import UnexpectedResponse
 import logging
 
 logger = logging.getLogger(__name__)
