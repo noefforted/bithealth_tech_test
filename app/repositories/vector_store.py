@@ -63,8 +63,7 @@ class DocumentRepository:
                     relevant_texts = []
 
                     for hit in hits:
-                        # Log ini HARUS sejajar di sini agar selalu muncul di terminal
-                        # Kita ambil 20 karakter pertama teksnya agar log rapi
+                        # ambil 20 karakter pertama teksnya agar log rapi
                         snippet = hit.payload.get("text", "")[:20]
                         logger.info(f"📊 SKOR: {hit.score:.4f} | DOKUMEN: {snippet}...")
 
