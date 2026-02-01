@@ -13,4 +13,4 @@ app.include_router(rag_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_event():
-    logging.getLogger(__name__).info("🚀 Application started")
+    logging.getLogger(__name__).info("===== RAG APP STARTED =====")
