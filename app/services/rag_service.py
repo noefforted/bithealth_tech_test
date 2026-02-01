@@ -14,7 +14,7 @@ class RAGService:
         self.embedder = embedding_service
         # Inisialisasi Groq Client
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model = "llama-3.1-8b-instant" # Model Groq yang sangat cepat
+        self.model = "llama-3.1-8b-instant"
         self.workflow = self._build_graph()
 
     def _build_graph(self):

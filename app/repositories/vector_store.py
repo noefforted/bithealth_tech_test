@@ -21,12 +21,11 @@ class DocumentRepository:
             logger.warning(f"Qdrant offline, menggunakan fallback: {e}")
 
     def _init_collection(self):
-        # ... logika pengecekan koleksi ...
-        # GUNAKAN variabel dari constructor di sini:
+        # Menggunakan recreate_collection untuk testing
         self.client.recreate_collection(
             collection_name=self.collection_name,
             vectors_config=VectorParams(
-                size=self.vector_size,  # <-- SEKARANG INI DINAMIS DARI .ENV
+                size=self.vector_size,
                 distance=Distance.DOT
             )
         )
