@@ -1,7 +1,12 @@
 import os
-from groq import Groq # Pip install groq
+import logging
 from typing import Dict, Any, List, TypedDict
+from groq import Groq
 from langgraph.graph import StateGraph, END
+from app.core.prompts import RAG_PROMPT_TEMPLATE
+
+# Setup logging sederhana untuk tracking error
+logger = logging.getLogger(__name__)
 
 class GraphState(TypedDict):
     question: str
@@ -12,56 +17,60 @@ class RAGService:
     def __init__(self, repository, embedding_service):
         self.repo = repository
         self.embedder = embedding_service
-        # Inisialisasi Groq Client
+        # Expert Tip: Ambil API Key dan Model dari ENV agar fleksibel
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model = "llama-3.1-8b-instant"
+        self.model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
         self.workflow = self._build_graph()
 
     def _build_graph(self):
         workflow = StateGraph(GraphState)
-        workflow.add_node("fetch_context", self._retrieve_logic)
-        workflow.add_node("generate_answer", self._answer_logic)
+        # Nama method diubah ke suffix _node agar standar dengan LangGraph
+        workflow.add_node("fetch_context", self._retrieve_node)
+        workflow.add_node("generate_answer", self._generate_node)
         
         workflow.set_entry_point("fetch_context")
         workflow.add_edge("fetch_context", "generate_answer")
         workflow.add_edge("generate_answer", END)
         return workflow.compile()
 
-    def _retrieve_logic(self, state: GraphState) -> Dict[str, Any]:
-        query = state["question"]
-        vector = self.embedder.get_embedding(query)
-        # Ambil dokumen dari Qdrant
-        context = self.repo.search(vector, query)
-        return {"context": context}
+    def _retrieve_node(self, state: GraphState) -> Dict[str, Any]:
+        """Logika untuk mengambil data dari vector store"""
+        try:
+            query = state["question"]
+            vector = self.embedder.get_embedding(query)
+            context = self.repo.search(vector, query)
+            return {"context": context}
+        except Exception as e:
+            logger.error(f"Error retrieving context: {e}")
+            return {"context": []}
 
-    def _answer_logic(self, state: GraphState) -> Dict[str, Any]:
-        ctx = "\n".join(state.get("context", []))
+    def _generate_node(self, state: GraphState) -> Dict[str, Any]:
+        """Logika untuk menghasilkan jawaban via LLM"""
+        ctx_list = state.get("context", [])
         question = state["question"]
         
-        if not ctx:
+        if not ctx_list:
             return {"answer": "Maaf, informasi tersebut tidak ditemukan dalam dokumen saya."}
 
-        # PROMPT UNTUK GENERATOR (LLM)
-        prompt = f"""
-        Anda adalah asisten AI yang membantu. Jawablah pertanyaan pengguna HANYA berdasarkan konteks yang disediakan.
-        Jika jawaban tidak ada di konteks, katakan Anda tidak tahu.
-        
-        KONTEKS:
-        {ctx}
-        
-        PERTANYAAN:
-        {question}
-        
-        JAWABAN:"""
+        # Menggunakan template eksternal
+        context_str = "\n".join(ctx_list)
+        prompt = RAG_PROMPT_TEMPLATE.format(context=context_str, question=question)
 
-        # Panggil Groq untuk narasi jawaban
-        completion = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1 # Biar jawabannya konsisten & tidak ngawur
-        )
-        
-        return {"answer": completion.choices[0].message.content}
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
+            return {"answer": completion.choices[0].message.content}
+        except Exception as e:
+            logger.error(f"Error calling Groq API: {e}")
+            return {"answer": "Maaf, terjadi kesalahan teknis saat menghubungi AI."}
 
     def execute(self, question: str):
-        return self.workflow.invoke({"question": question, "context": [], "answer": ""})
+        # Inisialisasi state awal dengan clean
+        return self.workflow.invoke({
+            "question": question, 
+            "context": [], 
+            "answer": ""
+        })
