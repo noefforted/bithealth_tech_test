@@ -3,9 +3,9 @@ import logging
 from typing import Dict, Any, List, TypedDict
 from groq import Groq
 from langgraph.graph import StateGraph, END
-from app.core.prompts import RAG_PROMPT_TEMPLATE
+from app.core.prompts import RESPONSE_PROMPT
 
-# Setup logging sederhana untuk tracking error
+# Setup logging untuk tracking error
 logger = logging.getLogger(__name__)
 
 class GraphState(TypedDict):
@@ -54,7 +54,7 @@ class RAGService:
 
         # Menggunakan template eksternal
         context_str = "\n".join(ctx_list)
-        prompt = RAG_PROMPT_TEMPLATE.format(context=context_str, question=question)
+        prompt = RESPONSE_PROMPT.format(context=context_str, question=question)
 
         try:
             completion = self.client.chat.completions.create(
