@@ -63,9 +63,8 @@ class DocumentRepository:
                     relevant_texts = []
 
                     for hit in hits:
-                        # ambil 20 karakter pertama teksnya agar log rapi
                         snippet = hit.payload.get("text", "")[:20]
-                        logger.info(f"📊 SKOR: {hit.score:.4f} | DOKUMEN: {snippet}...")
+                        logger.info(f"SKOR: {hit.score:.4f} | DOKUMEN: {snippet}...")
 
                         if hit.score >= threshold:
                             relevant_texts.append(hit.payload["text"])
