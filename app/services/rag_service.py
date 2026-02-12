@@ -17,9 +17,8 @@ class RAGService:
     def __init__(self, repository, embedding_service):
         self.repo = repository
         self.embedder = embedding_service
-        # Expert Tip: Ambil API Key dan Model dari ENV agar fleksibel
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        self.model_name = os.getenv("GROQ_MODEL")
         self.workflow = self._build_graph()
 
     def _build_graph(self):
