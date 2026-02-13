@@ -19,11 +19,13 @@ class DocumentRepository:
             client = QdrantClient(url=url, timeout=5)
             # Tes koneksi dengan cek collection
             client.get_collections()
-            logger.info(f"Connected to Qdrant Sexrver at {url}")
+            logger.info(f"Connected to Qdrant Server at {url}")
+            self.is_active = True
             return client
         except Exception as e:
-            logger.warning(f"Qdrant server unavailable ({e}). Falling back to Native In-Memory mode.")
-            # Native in memery fallback
+            logger.warning(f"Qdrant server unavailable ({e}). Falling back to Native In Memory mode.")
+            # Native in memory fallback
+            self.is_active = False
             return QdrantClient(":memory:")
 
     def _init_collection(self):
