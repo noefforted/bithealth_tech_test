@@ -4,6 +4,7 @@ from typing import Dict, Any, List, TypedDict
 from groq import Groq
 from langgraph.graph import StateGraph, END
 from app.core.prompts import RESPONSE_PROMPT
+from app.configs.config import settings
 
 # Setup logging untuk tracking error
 logger = logging.getLogger(__name__)
@@ -17,8 +18,8 @@ class RAGService:
     def __init__(self, repository, embedding_service):
         self.repo = repository
         self.embedder = embedding_service
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model_name = os.getenv("GROQ_MODEL", "groq-compound")
+        self.client = Groq(api_key=settings.GROQ_API_KEY)
+        self.model_name = settings.GROQ_MODEL
         self.workflow = self._build_graph()
 
     def _build_graph(self):
