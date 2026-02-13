@@ -1,78 +1,76 @@
 import uuid
+import logging
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
-from qdrant_client.http.exceptions import UnexpectedResponse
-import logging
+# from qdrant_client.http.exceptions import UnexpectedResponse
 
 logger = logging.getLogger(__name__)
 
 class DocumentRepository:
-    def __init__(self, url: str, collection_name: str, vector_size: int): # Tambahkan vector_size
+    def __init__(self, url: str, collection_name: str, vector_size: int):
         self.collection_name = collection_name
-        self.vector_size = vector_size  # Simpan sebagai variabel kelas
-        self.memory_fallback = []
+        self.vector_size = vector_size
+        # Inisialisasi Client dengan Fallback Otomatis
+        self.client = self._connect(url)
+        self._init_collection()
+
+    def _connect(self, url: str) -> QdrantClient:
         try:
-            self.client = QdrantClient(url)
-            self._init_collection()
-            self.is_active = True
-            logger.info("Berhasil terhubung ke Qdrant.")
+            client = QdrantClient(url=url, timeout=5)
+            # Tes koneksi dengan cek collection
+            client.get_collections()
+            logger.info(f"Connected to Qdrant Sexrver at {url}")
+            return client
         except Exception as e:
-            self.is_active = False
-            logger.warning(f"Qdrant offline, menggunakan fallback: {e}")
+            logger.warning(f"Qdrant server unavailable ({e}). Falling back to Native In-Memory mode.")
+            # Native in memery fallback
+            return QdrantClient(":memory:")
 
     def _init_collection(self):
-        # Menggunakan recreate_collection untuk testing
-        self.client.recreate_collection(
-            collection_name=self.collection_name,
-            vectors_config=VectorParams(
-                size=self.vector_size,
-                distance=Distance.DOT
+        # Memastikan koleksi siap digunakan
+        try:
+            self.client.recreate_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(
+                    size=self.vector_size,
+                    distance=Distance.DOT
+                )
             )
-        )
+            logger.info(f"Collection '{self.collection_name}' initialized.")
+        except Exception as e:
+            logger.error(f"Critical error during collection initialization: {e}")
 
     def add(self, vector: list, text: str, doc_id: str = None):
-            # Jika doc_id tidak diberikan, buat UUID otomatis
-            if not doc_id:
-                doc_id = str(uuid.uuid4())
-                
-            if self.is_active:
-                try:
-                    self.client.upsert(
-                        collection_name=self.collection_name,
-                        points=[PointStruct(id=doc_id, vector=vector, payload={"text": text})]
-                    )
-                    logger.info(f"Berhasil menyimpan dokumen dengan ID: {doc_id}")
-                except Exception as e:
-                    logger.error(f"Gagal upsert ke Qdrant: {e}")
-                    # Fallback jika upsert gagal
-                    self.memory_fallback.append({"id": doc_id, "text": text, "vector": vector})
-            else:
-                # Fallback jika Qdrant memang sedang tidak aktif
-                self.memory_fallback.append({"id": doc_id, "text": text, "vector": vector})
+        if not doc_id:
+            doc_id = str(uuid.uuid4())
+            
+        try:
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[PointStruct(id=doc_id, vector=vector, payload={"text": text})]
+            )
+            logger.info(f"Stored document: {doc_id}")
+        except Exception as e:
+            logger.error(f"Failed to upsert document: {e}")
 
     def search(self, vector: list, query_text: str, limit: int = 2):
-            if self.is_active:
-                try:
-                    hits = self.client.search(
-                        collection_name=self.collection_name, 
-                        query_vector=vector, 
-                        limit=limit
-                    )
-                    
-                    threshold = 6
-                    relevant_texts = []
-
-                    for hit in hits:
-                        snippet = hit.payload.get("text", "")[:20]
-                        logger.info(f"SKOR: {hit.score:.4f} | DOKUMEN: {snippet}...")
-
-                        if hit.score >= threshold:
-                            relevant_texts.append(hit.payload["text"])
-                    
-                    return relevant_texts
-                except Exception as e:
-                    logger.error(f"Gagal search di Qdrant: {e}")
-                    return []
+        try:
+            hits = self.client.search(
+                collection_name=self.collection_name, 
+                query_vector=vector, 
+                limit=limit
+            )
             
-            # Fallback search
-            return [d["text"] for d in self.memory_fallback if query_text.lower() in d["text"].lower()][:limit]
+            # Threshold disesuaikan dengan Dot Product (Fake embedding biasanya skornya tinggi)
+            threshold = 6.0 
+            relevant_texts = []
+
+            for hit in hits:
+                logger.info(f"Score: {hit.score:.4f} | Data: {hit.payload.get('text', '')[:30]}...")
+                if hit.score >= threshold:
+                    relevant_texts.append(hit.payload["text"])
+            
+            return relevant_texts
+        except Exception as e:
+            logger.error(f"Search failed: {e}")
+            return []

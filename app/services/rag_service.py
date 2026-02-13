@@ -18,7 +18,7 @@ class RAGService:
         self.repo = repository
         self.embedder = embedding_service
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model_name = os.getenv("GROQ_MODEL")
+        self.model_name = os.getenv("GROQ_MODEL", "groq-compound")
         self.workflow = self._build_graph()
 
     def _build_graph(self):
@@ -33,7 +33,7 @@ class RAGService:
         return workflow.compile()
 
     def _retrieve_node(self, state: GraphState) -> Dict[str, Any]:
-        """Logika untuk mengambil data dari vector store"""
+        # Logika untuk mengambil data dari vector store
         try:
             query = state["question"]
             vector = self.embedder.get_embedding(query)
@@ -44,7 +44,7 @@ class RAGService:
             return {"context": []}
 
     def _generate_node(self, state: GraphState) -> Dict[str, Any]:
-        """Logika untuk menghasilkan jawaban via LLM"""
+        # Logika untuk menghasilkan jawaban via LLM
         ctx_list = state.get("context", [])
         question = state["question"]
         
