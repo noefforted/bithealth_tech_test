@@ -61,7 +61,7 @@ class DocumentRepository:
                 limit=limit
             )
             
-            # Threshold disesuaikan dengan Dot Product (Fake embedding biasanya skornya tinggi)
+            # Threshold disesuaikan dengan Dot Product
             threshold = 6.0 
             relevant_texts = []
 
